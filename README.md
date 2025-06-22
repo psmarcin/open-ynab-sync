@@ -139,6 +139,12 @@ The application requires the following environment variables:
 go test ./...
 ```
 
+### Continuous Integration
+
+This project uses GitHub Actions for continuous integration. The workflow automatically runs all tests on every push to the `main` branch and on pull requests to the `main` branch.
+
+You can see the workflow configuration in `.github/workflows/go-tests.yml`.
+
 ### Project Structure
 
 - `main.go` - Entry point and scheduler setup
@@ -147,6 +153,8 @@ go test ./...
 - `Dockerfile` - Container definition
 - `docker-compose.yml` - Docker Compose configuration for easy deployment
 - `.env.example` - Example environment variables file
+- `.github/workflows/` - GitHub Actions workflow configurations
+  - `go-tests.yml` - CI workflow for running tests
 
 ## License
 
