@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Main service that synchronizes transactions between GoCardless and YNAB
+  open-ynab-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-ynab-sync
+    restart: unless-stopped
+    environment:
+      # GoCardless credentials
+      - GC_SECRET_ID=${GC_SECRET_ID}
+      - GC_SECRET_KEY=${GC_SECRET_KEY}
+      - GC_ACCOUNT_ID=${GC_ACCOUNT_ID}
+      # YNAB credentials
+      - YNAB_ACCOUNT_ID=${YNAB_ACCOUNT_ID}
+      - YNAB_TOKEN=${YNAB_TOKEN}
+      # Cron schedule for synchronization (default: "* * * * *" - every minute)
+      - CRON_SCHEDULE=${CRON_SCHEDULE}
+    # Logs are sent to stdout/stderr and can be viewed with docker logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      # Check if the process is still running
+      test: ["CMD-SHELL", "pgrep -f open-ynab-sync || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 10s
