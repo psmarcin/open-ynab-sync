@@ -15,6 +15,7 @@ services:
       - GC_ACCOUNT_ID=${GC_ACCOUNT_ID}
       # YNAB credentials
       - YNAB_ACCOUNT_ID=${YNAB_ACCOUNT_ID}
+      - YNAB_BUDGET_ID=${YNAB_BUDGET_ID}
       - YNAB_TOKEN=${YNAB_TOKEN}
       # Cron schedule for synchronization (default: "* * * * *" - every minute)
       - CRON_SCHEDULE=${CRON_SCHEDULE}
