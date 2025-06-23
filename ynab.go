@@ -5,18 +5,26 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/brunomvsouza/ynab.go"
 	"github.com/brunomvsouza/ynab.go/api"
 	"github.com/brunomvsouza/ynab.go/api/transaction"
+	"github.com/pkg/errors"
 )
 
-func uploadToYNAB(ctx context.Context, ynabAccountID string, transactions []Transaction) error {
+func uploadToYNAB(ctx context.Context, ynabc ynab.ClientServicer, ynabAccountID, ynabBudgetID string, transactions []Transaction) error {
 	l := slog.Default()
 	payloadTransactions := toYNABTransaction(ynabAccountID, transactions)
 
 	for _, payloadTransaction := range payloadTransactions {
-		l.InfoContext(ctx, "uploading transaction", "date", payloadTransaction.Date, "payee", payloadTransaction.PayeeName, "memo", payloadTransaction.Memo, "amount", payloadTransaction.Amount)
-		fmt.Println(payloadTransaction)
+		l.InfoContext(ctx, "uploading transaction", "date", payloadTransaction.Date, "payee", *payloadTransaction.PayeeName, "memo", *payloadTransaction.Memo, "amount", payloadTransaction.Amount)
 	}
+
+	result, err := ynabc.Transaction().CreateTransactions(ynabBudgetID, payloadTransactions)
+	if err != nil {
+		return errors.Wrapf(err, "failed to upload transactions")
+	}
+
+	l.InfoContext(ctx, "successfully uploaded transactions", "count", len(result.Transactions))
 	return nil
 }
 

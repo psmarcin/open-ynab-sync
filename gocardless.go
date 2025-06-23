@@ -141,6 +141,8 @@ type goCardlessListTransactionResponseTransaction struct {
 	RemittanceInformationUnstructured string `json:"remittanceInformationUnstructured"`
 	InternalTransactionId             string `json:"internalTransactionId"`
 	DebtorName                        string `json:"debtorName"`
+	CreditorName                      string `json:"creditorName"`
+	AdditionalInformation             string `json:"additionalInformation"`
 }
 
 type Transaction struct {
@@ -250,6 +252,8 @@ func toTransactions(response goCardlessListTransactionResponse) []Transaction {
 			Memo:       transaction.RemittanceInformationUnstructured,
 			Name:       toName(transaction),
 		})
+
+		l.Info("gocardless transaction", "date", transaction.ValueDate, "amount", transaction.TransactionAmount.Amount, "memo", transaction.RemittanceInformationUnstructured, "name", toName(transaction), "debtor_name", transaction.DebtorName, "creditor_name", transaction.CreditorName, "additional_information", transaction.AdditionalInformation)
 	}
 
 	return transactions
@@ -265,6 +269,9 @@ func toID(transaction goCardlessListTransactionResponseTransaction) string {
 func toName(transaction goCardlessListTransactionResponseTransaction) string {
 	if transaction.DebtorName != "" {
 		return transaction.DebtorName
+	}
+	if transaction.CreditorName != "" {
+		return transaction.CreditorName
 	}
 
 	return transaction.RemittanceInformationUnstructured

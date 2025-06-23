@@ -1,0 +1,22 @@
+all: true
+dir: './'
+filename: mocks_test.go
+force-file-write: true
+formatter: goimports
+log-level: info
+structname: '{{.Mock}}{{.InterfaceName}}'
+pkgname: 'main'
+recursive: false
+require-template-schema-exists: true
+template: testify
+template-schema: '{{.Template}}.schema.json'
+packages:
+  github.com/brunomvsouza/ynab.go:
+    config:
+      filename: ynabmock_test.go
+  github.com/brunomvsouza/ynab.go/api/transaction:
+    config:
+      filename: ynabtransactionmock_test.go
+  github.com/brunomvsouza/ynab.go/api/api:
+    config:
+      filename: ynabapimock_test.go
