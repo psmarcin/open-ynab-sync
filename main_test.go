@@ -58,13 +58,19 @@ func TestSynchronizeTransactions(t *testing.T) {
 	//transaction.NewService(ynabc)
 	//ynabc.EXPECT().Transaction().Return()
 
-	// Create the synchronize function
-	syncFunc := synchronizeTransactions(gc, ynabc, gcAccountID, ynabAccountID, ynabBudgetID)
+	oys := openYNABSync{
+		GCAccountID:   gcAccountID,
+		YNABAccountID: ynabAccountID,
+		YNABBudgetID:  ynabBudgetID,
+		newRelic:      nil,
+		gc:            &gc,
+		ynabc:         ynabc,
+	}
 
 	// Test
 	// Call the synchronize function - this should not panic
 	assert.NotPanics(t, func() {
-		syncFunc()
+		oys.synchronizeTransactions()
 	})
 
 	// Note: This test primarily verifies that the synchronization function doesn't panic or crash.
