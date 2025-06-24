@@ -9,7 +9,24 @@ import (
 
 	"github.com/brunomvsouza/ynab.go"
 	"github.com/go-co-op/gocron/v2"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
+
+type openYNABSync struct {
+	GCSecretID         string
+	GCSecretKey        string
+	GCAccountID        string
+	YNABToken          string
+	YNABBudgetID       string
+	YNABAccountID      string
+	CronSchedule       string
+	NewRelicLicenceKey string
+	NewRelicUserKey    string
+
+	newRelic *newrelic.Application
+	gc       *GoCardless
+	ynabc    ynab.ClientServicer
+}
 
 func main() {
 	l := slog.Default()
@@ -20,6 +37,36 @@ func main() {
 	ynabBudgetID := os.Getenv("YNAB_BUDGET_ID")
 	ynabToken := os.Getenv("YNAB_TOKEN")       // YNAB personal access token
 	cronSchedule := os.Getenv("CRON_SCHEDULE") // Cron schedule for synchronization
+	newRelicLicenceKey := os.Getenv("NEW_RELIC_LICENCE_KEY")
+	newRelicUserKey := os.Getenv("NEW_RELIC_USER_KEY")
+
+	newRelic, err := newrelic.NewApplication(
+		newrelic.ConfigAppName("open-ynab-sync-dell-01"),
+		newrelic.ConfigLicense(newRelicLicenceKey),
+		newrelic.ConfigAppLogForwardingEnabled(true),
+	)
+	if err != nil {
+		l.Error("failed to initialize New Relic", "error", err)
+		os.Exit(1)
+	}
+
+	txn := newRelic.StartTransaction("startup", newrelic.WithFunctionLocation())
+	defer txn.End()
+
+	oys := openYNABSync{
+		GCSecretID:         secretID,
+		GCSecretKey:        secretKey,
+		GCAccountID:        gcAccountID,
+		YNABToken:          ynabToken,
+		YNABBudgetID:       ynabBudgetID,
+		YNABAccountID:      ynabAccountID,
+		CronSchedule:       cronSchedule,
+		NewRelicLicenceKey: newRelicLicenceKey,
+		NewRelicUserKey:    newRelicUserKey,
+		newRelic:           newRelic,
+		gc:                 nil,
+		ynabc:              nil,
+	}
 
 	// Default cron schedule: run every minute
 	if cronSchedule == "" {
@@ -31,18 +78,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := context.Background()
+	ctx := newrelic.NewContext(context.Background(), txn)
 
 	gc := NewGoCardless(secretID, secretKey)
+	oys.gc = &gc
 	if err := gc.LogIn(ctx); err != nil {
+		txn.NoticeError(err)
 		l.ErrorContext(ctx, "failed to log in", "error", err)
 		os.Exit(1)
 	}
 
 	ynabc := ynab.NewClient(ynabToken)
+	oys.ynabc = ynabc
 
 	s, err := gocron.NewScheduler()
 	if err != nil {
+		txn.NoticeError(err)
 		l.ErrorContext(ctx, "failed to create scheduler", "error", err)
 		os.Exit(1)
 	}
@@ -50,9 +101,10 @@ func main() {
 
 	_, err = s.NewJob(
 		gocron.CronJob(cronSchedule, false),
-		gocron.NewTask(synchronizeTransactions(gc, ynabc, gcAccountID, ynabAccountID, ynabBudgetID)),
+		gocron.NewTask(oys.synchronizeTransactions),
 	)
 	if err != nil {
+		txn.NoticeError(err)
 		l.ErrorContext(ctx, "failed to create job", "error", err)
 		os.Exit(1)
 	}
@@ -62,26 +114,33 @@ func main() {
 	select {}
 }
 
-func synchronizeTransactions(gc GoCardless, ynabc ynab.ClientServicer, gcAccountID, ynabAccountID, ynabBudgetID string) func() {
-	return func() {
-		ctx := context.Background()
-		funcStartedAt := time.Now()
-		l := slog.Default().With("accountID", gcAccountID)
-		to := time.Now()
-		from := to.AddDate(0, 0, -14)
+func (oys *openYNABSync) synchronizeTransactions() {
+	ctx := context.Background()
+	txn := oys.newRelic.StartTransaction("synchronization", newrelic.WithFunctionLocation())
+	defer txn.End()
 
-		transactions, err := gc.ListTransactions(ctx, gcAccountID, from, to)
-		if err != nil {
-			l.ErrorContext(ctx, "failed to list transactions", "error", err)
-			return
-		}
+	funcStartedAt := time.Now()
+	l := slog.Default().With("accountID", oys.GCAccountID)
+	to := time.Now()
+	from := to.AddDate(0, 0, -14)
+	txn.AddAttribute("from", from.Format("2006-01-02"))
+	txn.AddAttribute("to", to.Format("2006-01-02"))
 
-		if err := uploadToYNAB(ctx, ynabc, ynabAccountID, ynabBudgetID, transactions); err != nil {
-			l.ErrorContext(ctx, "failed to upload transactions", "error", err)
-			return
-		}
-
-		l.InfoContext(ctx, "finished", "duration", time.Since(funcStartedAt))
+	transactions, err := oys.gc.ListTransactions(ctx, oys.GCAccountID, from, to)
+	if err != nil {
+		txn.NoticeError(err)
+		l.ErrorContext(ctx, "failed to list transactions", "error", err)
+		return
 	}
 
+	txn.AddAttribute("transactionsCount", len(transactions))
+
+	ctx = newrelic.NewContext(ctx, txn)
+	if err := uploadToYNAB(ctx, oys.ynabc, oys.YNABAccountID, oys.YNABBudgetID, transactions); err != nil {
+		txn.NoticeError(err)
+		l.ErrorContext(ctx, "failed to upload transactions", "error", err)
+		return
+	}
+
+	l.InfoContext(ctx, "finished", "duration", time.Since(funcStartedAt))
 }

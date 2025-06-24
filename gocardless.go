@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
 )
 
@@ -45,6 +46,10 @@ type loginResponse struct {
 }
 
 func (gc *GoCardless) LogIn(ctx context.Context) error {
+	txn := newrelic.FromContext(ctx)
+	seg := txn.StartSegment("goCardlessLogIn")
+	defer seg.End()
+
 	l := slog.Default()
 	requestBody := loginRequest{SecretID: gc.SecretID, SecretKey: gc.SecretKey}
 	requestBodyJSON, err := json.Marshal(requestBody)
@@ -62,6 +67,8 @@ func (gc *GoCardless) LogIn(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to make request")
 	}
+
+	seg.AddAttribute("responseStatusCode", response.StatusCode)
 
 	if response.StatusCode != 200 {
 		return errors.Errorf("failed to login: %s", response.Status)
@@ -154,6 +161,14 @@ type Transaction struct {
 }
 
 func (gc *GoCardless) ListTransactions(ctx context.Context, accountID string, from, to time.Time) ([]Transaction, error) {
+	txn := newrelic.FromContext(ctx)
+	seg := txn.StartSegment("listTransactions")
+	defer seg.End()
+
+	seg.AddAttribute("accountID", accountID)
+	seg.AddAttribute("from", from)
+	seg.AddAttribute("to", to)
+
 	l := slog.Default().With("accountID", accountID, "from", from, "to", to)
 	if gc.resetIn > 0 {
 		l.Info("sleeping for reset in", "reset_in", gc.resetIn)
@@ -217,12 +232,15 @@ func (gc *GoCardless) ListTransactions(ctx context.Context, accountID string, fr
 		return nil, errors.Errorf("failed to list transactions: %s", response.Status)
 	}
 
+	seg.AddAttribute("responseStatusCode", response.StatusCode)
+
 	parsedResponse := goCardlessListTransactionResponse{}
 	if err := json.NewDecoder(response.Body).Decode(&parsedResponse); err != nil {
 		return nil, errors.Wrapf(err, "failed to parse response: GET %s", u)
 	}
 
 	transactions := toTransactions(parsedResponse)
+	seg.AddAttribute("transactionsCount", len(transactions))
 	l.InfoContext(ctx, "got transactions", "count", len(transactions))
 
 	return transactions, nil

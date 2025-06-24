@@ -17,6 +17,9 @@ services:
       - YNAB_ACCOUNT_ID=${YNAB_ACCOUNT_ID}
       - YNAB_BUDGET_ID=${YNAB_BUDGET_ID}
       - YNAB_TOKEN=${YNAB_TOKEN}
+      # New Relic
+      - NEW_RELIC_LICENCE_KEY=${NEW_RELIC_LICENCE_KEY}
+      - NEW_RELIC_USER_KEY=${NEW_RELIC_USER_KEY}
       # Cron schedule for synchronization (default: "* * * * *" - every minute)
       - CRON_SCHEDULE=${CRON_SCHEDULE}
     # Logs are sent to stdout/stderr and can be viewed with docker logs
