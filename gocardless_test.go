@@ -185,6 +185,21 @@ func TestToTransactions(t *testing.T) {
 					DebtorName:                        "John Doe",
 				},
 			},
+			Pending: []goCardlessListTransactionResponseTransaction{
+				{
+					TransactionId: "tx2",
+					ValueDate:     "2024-01-01",
+					TransactionAmount: struct {
+						Amount   string `json:"amount"`
+						Currency string `json:"currency"`
+					}{
+						Amount:   "190.50",
+						Currency: "EUR",
+					},
+					RemittanceInformationUnstructured: "Payment for services",
+					CreditorName:                      "Miss Doe",
+				},
+			},
 		},
 	}
 
@@ -192,11 +207,17 @@ func TestToTransactions(t *testing.T) {
 	transactions := toTransactions(response)
 
 	// Assert
-	assert.Len(t, transactions, 1)
+	assert.Len(t, transactions, 2)
 	assert.Equal(t, "tx1", transactions[0].ID)
 	assert.Equal(t, int64(100500), transactions[0].AmountMili)
 	assert.Equal(t, "Payment for services", transactions[0].Memo)
 	assert.Equal(t, "John Doe", transactions[0].Name)
+
+	assert.Len(t, transactions, 2)
+	assert.Equal(t, "tx2", transactions[1].ID)
+	assert.Equal(t, int64(190500), transactions[1].AmountMili)
+	assert.Equal(t, "Payment for services", transactions[1].Memo)
+	assert.Equal(t, "Miss Doe", transactions[1].Name)
 }
 
 func TestListTransactionsWithResetIn(t *testing.T) {

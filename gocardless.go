@@ -251,30 +251,53 @@ func toTransactions(response goCardlessListTransactionResponse) []Transaction {
 
 	var transactions []Transaction
 	for _, transaction := range response.Transactions.Booked {
-		valueDate, err := time.Parse("2006-01-02", transaction.ValueDate)
+		t, err := toTransaction(transaction)
 		if err != nil {
-			l.Warn("failed to parse value date", "valueDate", transaction.ValueDate, "error", err)
+			l.Warn("failed to parse transaction", "error", err)
 			continue
 		}
 
-		amount, err := strconv.ParseFloat(transaction.TransactionAmount.Amount, 64)
+		transactions = append(transactions, t)
+	}
+
+	for _, transaction := range response.Transactions.Pending {
+		t, err := toTransaction(transaction)
 		if err != nil {
-			l.Warn("failed to parse amount", "amount", transaction.TransactionAmount.Amount, "error", err)
+			l.Warn("failed to parse transaction", "error", err)
 			continue
 		}
 
-		transactions = append(transactions, Transaction{
-			ID:         toID(transaction),
-			Date:       valueDate,
-			AmountMili: int64(amount * 1000),
-			Memo:       transaction.RemittanceInformationUnstructured,
-			Name:       toName(transaction),
-		})
-
-		l.Info("gocardless transaction", "date", transaction.ValueDate, "amount", transaction.TransactionAmount.Amount, "memo", transaction.RemittanceInformationUnstructured, "name", toName(transaction), "debtor_name", transaction.DebtorName, "creditor_name", transaction.CreditorName, "additional_information", transaction.AdditionalInformation)
+		transactions = append(transactions, t)
 	}
 
 	return transactions
+}
+
+func toTransaction(goCardlessTransaction goCardlessListTransactionResponseTransaction) (Transaction, error) {
+	l := slog.Default()
+	valueDate, err := time.Parse("2006-01-02", goCardlessTransaction.ValueDate)
+	if err != nil {
+		l.Warn("failed to parse value date", "valueDate", goCardlessTransaction.ValueDate, "error", err)
+		return Transaction{}, errors.Wrapf(err, "failed to parse value date: %s", goCardlessTransaction.ValueDate)
+	}
+
+	amount, err := strconv.ParseFloat(goCardlessTransaction.TransactionAmount.Amount, 64)
+	if err != nil {
+		l.Warn("failed to parse amount", "amount", goCardlessTransaction.TransactionAmount.Amount, "error", err)
+		return Transaction{}, errors.Wrapf(err, "failed to parse amount: %s", goCardlessTransaction.TransactionAmount.Amount)
+	}
+
+	transaction := Transaction{
+		ID:         toID(goCardlessTransaction),
+		Date:       valueDate,
+		AmountMili: int64(amount * 1000),
+		Memo:       goCardlessTransaction.RemittanceInformationUnstructured,
+		Name:       toName(goCardlessTransaction),
+	}
+
+	l.Info("gocardless transaction", "date", goCardlessTransaction.ValueDate, "amount", goCardlessTransaction.TransactionAmount.Amount, "memo", goCardlessTransaction.RemittanceInformationUnstructured, "name", toName(goCardlessTransaction), "debtor_name", goCardlessTransaction.DebtorName, "creditor_name", goCardlessTransaction.CreditorName, "additional_information", goCardlessTransaction.AdditionalInformation)
+
+	return transaction, nil
 }
 
 func toID(transaction goCardlessListTransactionResponseTransaction) string {
