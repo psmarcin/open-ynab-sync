@@ -37,8 +37,6 @@ func main() {
 	cronSchedule := os.Getenv("CRON_SCHEDULE") // Cron schedule for synchronization
 	newRelicLicenceKey := os.Getenv("NEW_RELIC_LICENCE_KEY")
 	newRelicAppName := os.Getenv("NEW_RELIC_APP_NAME")
-	l.Info("licence", "newRelicLicenceKey", newRelicLicenceKey, `os.Getenv("NEW_RELIC_LICENCE_KEY")`, os.Getenv("NEW_RELIC_LICENCE_KEY"))
-	l.Info("appname", "newRelicAppName", newRelicAppName, `os.Getenv("NEW_RELIC_APP_NAME")`, os.Getenv("NEW_RELIC_APP_NAME"))
 
 	newRelicApp, err := newrelic.NewApplication(
 		newrelic.ConfigAppName(newRelicAppName),
@@ -58,10 +56,6 @@ func main() {
 
 	txn := newRelicApp.StartTransaction("startup", newrelic.WithFunctionLocation())
 	defer txn.End()
-
-	txn1 := newRelicApp.StartTransaction("startup", newrelic.WithFunctionLocation())
-	time.Sleep(time.Second)
-	txn1.End()
 
 	oys := openYNABSync{
 		GCSecretID:    secretID,
