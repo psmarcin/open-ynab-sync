@@ -13,15 +13,13 @@ import (
 )
 
 type openYNABSync struct {
-	GCSecretID         string
-	GCSecretKey        string
-	GCAccountID        string
-	YNABToken          string
-	YNABBudgetID       string
-	YNABAccountID      string
-	CronSchedule       string
-	NewRelicLicenceKey string
-	NewRelicUserKey    string
+	GCSecretID    string
+	GCSecretKey   string
+	GCAccountID   string
+	YNABToken     string
+	YNABBudgetID  string
+	YNABAccountID string
+	CronSchedule  string
 
 	newRelic *newrelic.Application
 	gc       *GoCardless
@@ -38,10 +36,10 @@ func main() {
 	ynabToken := os.Getenv("YNAB_TOKEN")       // YNAB personal access token
 	cronSchedule := os.Getenv("CRON_SCHEDULE") // Cron schedule for synchronization
 	newRelicLicenceKey := os.Getenv("NEW_RELIC_LICENCE_KEY")
-	newRelicUserKey := os.Getenv("NEW_RELIC_USER_KEY")
+	newRelicAppName := os.Getenv("NEW_RELIC_APP_NAME")
 
 	newRelic, err := newrelic.NewApplication(
-		newrelic.ConfigAppName("open-ynab-sync-dell-01"),
+		newrelic.ConfigAppName(newRelicAppName),
 		newrelic.ConfigLicense(newRelicLicenceKey),
 		newrelic.ConfigAppLogForwardingEnabled(true),
 	)
@@ -54,18 +52,16 @@ func main() {
 	defer txn.End()
 
 	oys := openYNABSync{
-		GCSecretID:         secretID,
-		GCSecretKey:        secretKey,
-		GCAccountID:        gcAccountID,
-		YNABToken:          ynabToken,
-		YNABBudgetID:       ynabBudgetID,
-		YNABAccountID:      ynabAccountID,
-		CronSchedule:       cronSchedule,
-		NewRelicLicenceKey: newRelicLicenceKey,
-		NewRelicUserKey:    newRelicUserKey,
-		newRelic:           newRelic,
-		gc:                 nil,
-		ynabc:              nil,
+		GCSecretID:    secretID,
+		GCSecretKey:   secretKey,
+		GCAccountID:   gcAccountID,
+		YNABToken:     ynabToken,
+		YNABBudgetID:  ynabBudgetID,
+		YNABAccountID: ynabAccountID,
+		CronSchedule:  cronSchedule,
+		newRelic:      newRelic,
+		gc:            nil,
+		ynabc:         nil,
 	}
 
 	// Default cron schedule: run every minute
