@@ -38,18 +38,28 @@ func main() {
 	newRelicLicenceKey := os.Getenv("NEW_RELIC_LICENCE_KEY")
 	newRelicAppName := os.Getenv("NEW_RELIC_APP_NAME")
 
-	newRelic, err := newrelic.NewApplication(
+	newRelicApp, err := newrelic.NewApplication(
 		newrelic.ConfigAppName(newRelicAppName),
 		newrelic.ConfigLicense(newRelicLicenceKey),
+		newrelic.ConfigAppLogMetricsEnabled(true),
 		newrelic.ConfigAppLogForwardingEnabled(true),
 	)
 	if err != nil {
 		l.Error("failed to initialize New Relic", "error", err)
 		os.Exit(1)
 	}
+	if newRelicApp.WaitForConnection(time.Second*10) != nil {
+		l.Error("failed to connect to New Relic")
+		os.Exit(1)
+	}
+	defer newRelicApp.Shutdown(time.Second)
 
-	txn := newRelic.StartTransaction("startup", newrelic.WithFunctionLocation())
+	txn := newRelicApp.StartTransaction("startup", newrelic.WithFunctionLocation())
 	defer txn.End()
+
+	txn1 := newRelicApp.StartTransaction("startup", newrelic.WithFunctionLocation())
+	time.Sleep(time.Second)
+	txn1.End()
 
 	oys := openYNABSync{
 		GCSecretID:    secretID,
@@ -59,7 +69,7 @@ func main() {
 		YNABBudgetID:  ynabBudgetID,
 		YNABAccountID: ynabAccountID,
 		CronSchedule:  cronSchedule,
-		newRelic:      newRelic,
+		newRelic:      newRelicApp,
 		gc:            nil,
 		ynabc:         nil,
 	}
