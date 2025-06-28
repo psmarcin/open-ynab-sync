@@ -37,20 +37,20 @@ func main() {
 	cronSchedule := os.Getenv("CRON_SCHEDULE") // Cron schedule for synchronization
 	newRelicLicenceKey := os.Getenv("NEW_RELIC_LICENCE_KEY")
 	newRelicAppName := os.Getenv("NEW_RELIC_APP_NAME")
-	l.Info("newRelicLicenceKey", newRelicLicenceKey, `os.Getenv("NEW_RELIC_LICENCE_KEY")`, os.Getenv("NEW_RELIC_LICENCE_KEY"))
-	l.Info("newRelicAppName", newRelicAppName, `os.Getenv("NEW_RELIC_APP_NAME")`, os.Getenv("NEW_RELIC_APP_NAME"))
+	l.Info("licence", "newRelicLicenceKey", newRelicLicenceKey, `os.Getenv("NEW_RELIC_LICENCE_KEY")`, os.Getenv("NEW_RELIC_LICENCE_KEY"))
+	l.Info("appname", "newRelicAppName", newRelicAppName, `os.Getenv("NEW_RELIC_APP_NAME")`, os.Getenv("NEW_RELIC_APP_NAME"))
 
 	newRelicApp, err := newrelic.NewApplication(
 		newrelic.ConfigAppName(newRelicAppName),
 		newrelic.ConfigLicense(newRelicLicenceKey),
-		newrelic.ConfigAppLogMetricsEnabled(true),
-		newrelic.ConfigAppLogForwardingEnabled(true),
+		newrelic.ConfigAppLogMetricsEnabled(false),
+		newrelic.ConfigAppLogForwardingEnabled(false),
 	)
 	if err != nil {
 		l.Error("failed to initialize New Relic", "error", err)
 		os.Exit(1)
 	}
-	if newRelicApp.WaitForConnection(time.Second*10) != nil {
+	if newRelicApp.WaitForConnection(time.Second*30) != nil {
 		l.Error("failed to connect to New Relic")
 		os.Exit(1)
 	}
