@@ -43,6 +43,7 @@ func main() {
 	newRelicApp, err := newrelic.NewApplication(
 		newrelic.ConfigAppName(newRelicAppName),
 		newrelic.ConfigLicense(newRelicLicenceKey),
+		newrelic.ConfigDebugLogger(os.Stdout),
 		newrelic.ConfigAppLogMetricsEnabled(false),
 		newrelic.ConfigAppLogForwardingEnabled(false),
 	)
