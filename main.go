@@ -72,13 +72,15 @@ func main() {
 
 	// Default cron schedule: run every minute
 	if cronSchedule == "" {
-		cronSchedule = "0 9/12 * * *"
+		cronSchedule = "0 6,18 * * *"
 	}
 
 	if secretID == "" || secretKey == "" || gcAccountID == "" || ynabAccountID == "" || ynabToken == "" {
 		fmt.Println("Error: GC_SECRET_ID, GC_SECRET_KEY, GC_ACCOUNT_ID, YNAB_ACCOUNT_ID and YNAB_TOKEN environment variables are required")
 		os.Exit(1)
 	}
+
+	l.Info("configuration", "cron", cronSchedule, "gocardless_account_id", gcAccountID, "ynab_account_id", ynabAccountID, "ynab_budget_id", ynabBudgetID)
 
 	ctx := newrelic.NewContext(context.Background(), txn)
 
