@@ -197,6 +197,7 @@ func TestToTransactions(t *testing.T) {
 						Currency: "EUR",
 					},
 					RemittanceInformationUnstructured: "Payment for services",
+					DebtorName:                        "Mr Doe",
 					CreditorName:                      "Miss Doe",
 				},
 			},
@@ -217,7 +218,7 @@ func TestToTransactions(t *testing.T) {
 	assert.Equal(t, "tx2", transactions[1].ID)
 	assert.Equal(t, int64(190500), transactions[1].AmountMili)
 	assert.Equal(t, "Payment for services", transactions[1].Memo)
-	assert.Equal(t, "Miss Doe", transactions[1].Name)
+	assert.Equal(t, "Mr Doe", transactions[1].Name)
 }
 
 func TestListTransactionsWithResetIn(t *testing.T) {

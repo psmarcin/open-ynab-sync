@@ -15,10 +15,7 @@ services:
       # GoCardless credentials
       - GC_SECRET_ID=${GC_SECRET_ID}
       - GC_SECRET_KEY=${GC_SECRET_KEY}
-      - GC_ACCOUNT_ID=${GC_ACCOUNT_ID}
       # YNAB credentials
-      - YNAB_ACCOUNT_ID=${YNAB_ACCOUNT_ID}
-      - YNAB_BUDGET_ID=${YNAB_BUDGET_ID}
       - YNAB_TOKEN=${YNAB_TOKEN}
       # New Relic
       - NEW_RELIC_LICENCE_KEY=${NEW_RELIC_LICENCE_KEY}
@@ -26,6 +23,7 @@ services:
       - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME}
       # Cron schedule for synchronization (default: "* * * * *" - every minute)
       - CRON_SCHEDULE=${CRON_SCHEDULE}
+      - JOBS=${JOBS}
     # Logs are sent to stdout/stderr and can be viewed with docker logs
     logging:
       driver: "json-file"

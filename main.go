@@ -13,13 +13,11 @@ import (
 )
 
 type openYNABSync struct {
-	GCSecretID    string
-	GCSecretKey   string
-	GCAccountID   string
-	YNABToken     string
-	YNABBudgetID  string
-	YNABAccountID string
-	CronSchedule  string
+	GCSecretID   string
+	GCSecretKey  string
+	YNABToken    string
+	CronSchedule string
+	Jobs         []job
 
 	newRelic *newrelic.Application
 	gc       *GoCardless
@@ -30,9 +28,6 @@ func main() {
 	l := slog.Default()
 	secretID := os.Getenv("GC_SECRET_ID")
 	secretKey := os.Getenv("GC_SECRET_KEY")
-	gcAccountID := os.Getenv("GC_ACCOUNT_ID")     // GoCardless account ID
-	ynabAccountID := os.Getenv("YNAB_ACCOUNT_ID") // YNAB account ID
-	ynabBudgetID := os.Getenv("YNAB_BUDGET_ID")
 	ynabToken := os.Getenv("YNAB_TOKEN")       // YNAB personal access token
 	cronSchedule := os.Getenv("CRON_SCHEDULE") // Cron schedule for synchronization
 	newRelicLicenceKey := os.Getenv("NEW_RELIC_LICENCE_KEY")
@@ -57,17 +52,23 @@ func main() {
 	txn := newRelicApp.StartTransaction("startup", newrelic.WithFunctionLocation())
 	defer txn.End()
 
+	jobs, err := envToJobs(os.Getenv("JOBS"))
+	if err != nil {
+		txn.NoticeError(err)
+		l.Error("failed to parse jobs", "error", err)
+		os.Exit(1)
+	}
+
 	oys := openYNABSync{
-		GCSecretID:    secretID,
-		GCSecretKey:   secretKey,
-		GCAccountID:   gcAccountID,
-		YNABToken:     ynabToken,
-		YNABBudgetID:  ynabBudgetID,
-		YNABAccountID: ynabAccountID,
-		CronSchedule:  cronSchedule,
-		newRelic:      newRelicApp,
-		gc:            nil,
-		ynabc:         nil,
+		GCSecretID:   secretID,
+		GCSecretKey:  secretKey,
+		YNABToken:    ynabToken,
+		CronSchedule: cronSchedule,
+		Jobs:         jobs,
+
+		newRelic: newRelicApp,
+		gc:       nil,
+		ynabc:    nil,
 	}
 
 	// Default cron schedule: run every minute
@@ -75,12 +76,12 @@ func main() {
 		cronSchedule = "0 6,18 * * *"
 	}
 
-	if secretID == "" || secretKey == "" || gcAccountID == "" || ynabAccountID == "" || ynabToken == "" {
+	if secretID == "" || secretKey == "" || ynabToken == "" {
 		fmt.Println("Error: GC_SECRET_ID, GC_SECRET_KEY, GC_ACCOUNT_ID, YNAB_ACCOUNT_ID and YNAB_TOKEN environment variables are required")
 		os.Exit(1)
 	}
 
-	l.Info("configuration", "cron", cronSchedule, "gocardless_account_id", gcAccountID, "ynab_account_id", ynabAccountID, "ynab_budget_id", ynabBudgetID)
+	l.Info("configuration", "cron", cronSchedule, "jobs", jobs)
 
 	ctx := newrelic.NewContext(context.Background(), txn)
 
@@ -119,18 +120,27 @@ func main() {
 }
 
 func (oys *openYNABSync) synchronizeTransactions() {
+	for _, j := range oys.Jobs {
+		oys.synchronizeTransaction(j)
+	}
+}
+
+func (oys *openYNABSync) synchronizeTransaction(j job) {
 	ctx := context.Background()
 	txn := oys.newRelic.StartTransaction("synchronization", newrelic.WithFunctionLocation())
 	defer txn.End()
 
 	funcStartedAt := time.Now()
-	l := slog.Default().With("accountID", oys.GCAccountID)
+	l := slog.Default().With("gocardless_account_id", j.GCAccountID, "ynab_account_id", j.YNABAccountID, "ynab_budget_id", j.YNABBudgetID)
 	to := time.Now()
-	from := to.AddDate(0, 0, -14)
+	from := to.AddDate(0, 0, -20)
 	txn.AddAttribute("from", from.Format("2006-01-02"))
 	txn.AddAttribute("to", to.Format("2006-01-02"))
+	txn.AddAttribute("gocardlessAccountId", j.GCAccountID)
+	txn.AddAttribute("ynabAccountId", j.YNABAccountID)
+	txn.AddAttribute("ynabBudgetId", j.YNABBudgetID)
 
-	transactions, err := oys.gc.ListTransactions(ctx, oys.GCAccountID, from, to)
+	transactions, err := oys.gc.ListTransactions(ctx, j.GCAccountID, from, to)
 	if err != nil {
 		txn.NoticeError(err)
 		l.ErrorContext(ctx, "failed to list transactions", "error", err)
@@ -140,7 +150,7 @@ func (oys *openYNABSync) synchronizeTransactions() {
 	txn.AddAttribute("transactionsCount", len(transactions))
 
 	ctx = newrelic.NewContext(ctx, txn)
-	if err := uploadToYNAB(ctx, oys.ynabc, oys.YNABAccountID, oys.YNABBudgetID, transactions); err != nil {
+	if err := uploadToYNAB(ctx, oys.ynabc, j.YNABAccountID, j.YNABBudgetID, transactions); err != nil {
 		txn.NoticeError(err)
 		l.ErrorContext(ctx, "failed to upload transactions", "error", err)
 		return

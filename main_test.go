@@ -11,11 +11,6 @@ import (
 
 func TestSynchronizeTransactions(t *testing.T) {
 	t.Skip()
-	// Setup
-	gcAccountID := "gc-account-123"
-	ynabAccountID := "ynab-account-456"
-	ynabBudgetID := "ynab-budget-789"
-
 	// Create a mock transport for the GoCardless HTTP client
 	mockTransport := &MockTransport{
 		RoundTripFunc: func(req *http.Request) (*http.Response, error) {
@@ -59,12 +54,9 @@ func TestSynchronizeTransactions(t *testing.T) {
 	//ynabc.EXPECT().Transaction().Return()
 
 	oys := openYNABSync{
-		GCAccountID:   gcAccountID,
-		YNABAccountID: ynabAccountID,
-		YNABBudgetID:  ynabBudgetID,
-		newRelic:      nil,
-		gc:            &gc,
-		ynabc:         ynabc,
+		newRelic: nil,
+		gc:       &gc,
+		ynabc:    ynabc,
 	}
 
 	// Test

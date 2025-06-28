@@ -308,11 +308,14 @@ func toID(transaction goCardlessListTransactionResponseTransaction) string {
 }
 
 func toName(transaction goCardlessListTransactionResponseTransaction) string {
-	if transaction.DebtorName != "" {
-		return transaction.DebtorName
-	}
-	if transaction.CreditorName != "" {
-		return transaction.CreditorName
+	amountParsed, err := strconv.ParseFloat(transaction.TransactionAmount.Amount, 64)
+	if err == nil {
+		if amountParsed >= 0 && transaction.DebtorName != "" {
+			return transaction.DebtorName
+		}
+		if amountParsed < 0 && transaction.CreditorName != "" {
+			return transaction.CreditorName
+		}
 	}
 
 	return transaction.RemittanceInformationUnstructured
