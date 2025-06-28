@@ -37,6 +37,8 @@ func main() {
 	cronSchedule := os.Getenv("CRON_SCHEDULE") // Cron schedule for synchronization
 	newRelicLicenceKey := os.Getenv("NEW_RELIC_LICENCE_KEY")
 	newRelicAppName := os.Getenv("NEW_RELIC_APP_NAME")
+	l.Info("newRelicLicenceKey", newRelicLicenceKey, `os.Getenv("NEW_RELIC_LICENCE_KEY")`, os.Getenv("NEW_RELIC_LICENCE_KEY"))
+	l.Info("newRelicAppName", newRelicAppName, `os.Getenv("NEW_RELIC_APP_NAME")`, os.Getenv("NEW_RELIC_APP_NAME"))
 
 	newRelicApp, err := newrelic.NewApplication(
 		newrelic.ConfigAppName(newRelicAppName),
