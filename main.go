@@ -87,11 +87,6 @@ func main() {
 
 	gc := NewGoCardless(secretID, secretKey)
 	oys.gc = &gc
-	if err := gc.LogIn(ctx); err != nil {
-		txn.NoticeError(err)
-		l.ErrorContext(ctx, "failed to log in", "error", err)
-		os.Exit(1)
-	}
 
 	ynabc := ynab.NewClient(ynabToken)
 	oys.ynabc = ynabc
@@ -140,6 +135,13 @@ func (oys *openYNABSync) synchronizeTransaction(j job) {
 	txn.AddAttribute("ynabAccountId", j.YNABAccountID)
 	txn.AddAttribute("ynabBudgetId", j.YNABBudgetID)
 
+	ctx = newrelic.NewContext(ctx, txn)
+	if err := oys.gc.LogIn(ctx); err != nil {
+		txn.NoticeError(err)
+		l.ErrorContext(ctx, "failed to log in", "error", err)
+		return
+	}
+
 	transactions, err := oys.gc.ListTransactions(ctx, j.GCAccountID, from, to)
 	if err != nil {
 		txn.NoticeError(err)
@@ -148,8 +150,6 @@ func (oys *openYNABSync) synchronizeTransaction(j job) {
 	}
 
 	txn.AddAttribute("transactionsCount", len(transactions))
-
-	ctx = newrelic.NewContext(ctx, txn)
 	if err := uploadToYNAB(ctx, oys.ynabc, j.YNABAccountID, j.YNABBudgetID, transactions); err != nil {
 		txn.NoticeError(err)
 		l.ErrorContext(ctx, "failed to upload transactions", "error", err)
