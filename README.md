@@ -33,9 +33,9 @@ docker build -t open-ynab-sync .
 docker run -d \
   -e GC_SECRET_ID=your_gocardless_secret_id \
   -e GC_SECRET_KEY=your_gocardless_secret_key \
-  -e GC_ACCOUNT_ID=your_gocardless_account_id \
-  -e YNAB_ACCOUNT_ID=your_ynab_account_id \
   -e YNAB_TOKEN=your_ynab_token \
+  -e JOBS=your_gocardless_account_id,your_ynab_budget_id,your_ynab_account_id \
+  -e CRON_SCHEDULE="0 6,18 * * *" \
   --name open-ynab-sync \
   open-ynab-sync
 ```
@@ -92,9 +92,9 @@ go build -o open-ynab-sync
 ```bash
 GC_SECRET_ID=your_gocardless_secret_id \
 GC_SECRET_KEY=your_gocardless_secret_key \
-GC_ACCOUNT_ID=your_gocardless_account_id \
-YNAB_ACCOUNT_ID=your_ynab_account_id \
 YNAB_TOKEN=your_ynab_token \
+JOBS=your_gocardless_account_id,your_ynab_budget_id,your_ynab_account_id \
+CRON_SCHEDULE="0 6,18 * * *" \
 ./open-ynab-sync
 ```
 
@@ -106,9 +106,34 @@ The application requires the following environment variables:
 |----------|-------------|
 | `GC_SECRET_ID` | GoCardless API Secret ID |
 | `GC_SECRET_KEY` | GoCardless API Secret Key |
-| `GC_ACCOUNT_ID` | GoCardless Account ID |
-| `YNAB_ACCOUNT_ID` | YNAB Account ID |
 | `YNAB_TOKEN` | YNAB Personal Access Token |
+| `JOBS` | Configuration for synchronization jobs (see below) |
+| `CRON_SCHEDULE` | Cron schedule for synchronization (default: "0 6,18 * * *" - twice daily at 6am and 6pm) |
+| `NEW_RELIC_LICENCE_KEY` | New Relic License Key (optional, for monitoring) |
+| `NEW_RELIC_USER_KEY` | New Relic User Key (optional, for monitoring) |
+| `NEW_RELIC_APP_NAME` | New Relic Application Name (optional, for monitoring) |
+
+### Jobs Configuration
+
+The `JOBS` environment variable allows you to configure multiple synchronization jobs. Each job synchronizes transactions from a specific GoCardless account to a specific YNAB account.
+
+Format: `GCAccountID1,YNABBudgetID1,YNABAccountID1|GCAccountID2,YNABBudgetID2,YNABAccountID2|...`
+
+Each job consists of three parts separated by commas:
+1. GoCardless Account ID
+2. YNAB Budget ID
+3. YNAB Account ID
+
+Multiple jobs are separated by the pipe character (`|`).
+
+Example:
+```
+JOBS=gc_acc_123456,ynab_budget_abc123,ynab_account_def456|gc_acc_789012,ynab_budget_ghi789,ynab_account_jkl012
+```
+
+This configures two synchronization jobs:
+1. From GoCardless account `gc_acc_123456` to YNAB account `ynab_account_def456` in budget `ynab_budget_abc123`
+2. From GoCardless account `gc_acc_789012` to YNAB account `ynab_account_jkl012` in budget `ynab_budget_ghi789`
 
 ### Getting GoCardless Credentials
 
@@ -126,10 +151,11 @@ The application requires the following environment variables:
 ## How It Works
 
 1. The application authenticates with GoCardless using your Secret ID and Secret Key
-2. It fetches transactions from the past 2 months from your GoCardless account
+2. It fetches transactions from the past 20 days from your GoCardless account
 3. It converts these transactions to YNAB format
 4. It uploads the transactions to your YNAB account
-5. This process repeats every minute
+5. This process repeats according to your CRON_SCHEDULE (default: twice daily at 6am and 6pm)
+6. If New Relic monitoring is configured, performance metrics and logs are sent to New Relic
 
 ## Development
 
@@ -148,6 +174,7 @@ You can see the workflow configuration in `.github/workflows/go-tests.yml`.
 ### Project Structure
 
 - `main.go` - Entry point and scheduler setup
+- `job.go` - Job configuration and parsing
 - `gocardless.go` - GoCardless API integration
 - `ynab.go` - YNAB API integration
 - `Dockerfile` - Container definition
