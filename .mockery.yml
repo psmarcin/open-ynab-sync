@@ -20,3 +20,10 @@ packages:
   github.com/brunomvsouza/ynab.go/api/api:
     config:
       filename: ynabapimock_test.go
+  psmarcin.github.com/open-ynab-sync/cmd/link/api:
+    config:
+      filename: "{{.InterfaceName}}.go"
+      dir: mocks
+      with-expecter: true
+    interfaces:
+      GoCardlessClient:
