@@ -45,6 +45,7 @@ func main() {
 
 	// Create authorization flow
 	authFlow := auth.NewAuthFlow(gcClient, cfg, logger, callbackServer)
+	authFlow.AutoOpenBrowser = true
 
 	// Execute authorization flow
 	accounts, err := authFlow.Execute(ctx)

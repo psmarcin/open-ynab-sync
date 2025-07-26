@@ -17,10 +17,11 @@ import (
 
 // AuthFlow manages the authorization flow
 type AuthFlow struct {
-	Client      api.GoCardlessClient
-	Config      *config.Config
-	Logger      *slog.Logger
-	CallbackSrv *server.CallbackServer
+	Client          api.GoCardlessClient
+	Config          *config.Config
+	Logger          *slog.Logger
+	CallbackSrv     *server.CallbackServer
+	AutoOpenBrowser bool
 }
 
 // NewAuthFlow creates a new authorization flow
@@ -65,10 +66,14 @@ func (a *AuthFlow) Execute(ctx context.Context) ([]string, error) {
 		return nil, errors.Wrap(err, "failed to create requisition")
 	}
 
-	// Open the link in the browser
-	a.Logger.InfoContext(ctx, "opening authorization link in browser...", "link", link)
-	if err := openBrowser(link); err != nil {
-		a.Logger.WarnContext(ctx, "failed to open browser", "error", err)
+	if a.AutoOpenBrowser {
+		// Open the link in the browser
+		a.Logger.InfoContext(ctx, "opening authorization link in browser...", "link", link)
+		if err := openBrowser(link); err != nil {
+			a.Logger.WarnContext(ctx, "failed to open browser", "error", err)
+		}
+	} else {
+		a.Logger.InfoContext(ctx, "authorization link", "link", link)
 	}
 
 	// Wait for callback

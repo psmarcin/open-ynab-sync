@@ -5,7 +5,7 @@ force-file-write: true
 formatter: goimports
 log-level: info
 structname: '{{.Mock}}{{.InterfaceName}}'
-pkgname: 'main'
+pkgname: '{{.SrcPackageName}}'
 recursive: false
 require-template-schema-exists: true
 template: testify
@@ -14,16 +14,18 @@ packages:
   github.com/brunomvsouza/ynab.go:
     config:
       filename: ynabmock_test.go
+      pkgname: 'main'
   github.com/brunomvsouza/ynab.go/api/transaction:
     config:
       filename: ynabtransactionmock_test.go
+      pkgname: 'main'
+
   github.com/brunomvsouza/ynab.go/api/api:
     config:
       filename: ynabapimock_test.go
+      pkgname: 'main'
+
   psmarcin.github.com/open-ynab-sync/cmd/link/api:
     config:
-      filename: "{{.InterfaceName}}.go"
-      dir: mocks
-      with-expecter: true
-    interfaces:
-      GoCardlessClient:
+      filename: gocardless.go
+      dir: 'cmd/link/api/apimock'
