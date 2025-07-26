@@ -27,10 +27,12 @@ type Config struct {
 
 // LoadConfigFromEnv loads configuration from environment variables
 func LoadConfigFromEnv() (Config, error) {
-	// Load .env file
-	err := godotenv.Load(".env")
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to load .env file: %w", err)
+	if _, err := os.Stat(".env"); err == nil {
+		// Load .env file
+		err := godotenv.Load(".env")
+		if err != nil {
+			return Config{}, fmt.Errorf("failed to load .env file: %w", err)
+		}
 	}
 
 	secretID := os.Getenv("GC_SECRET_ID")
