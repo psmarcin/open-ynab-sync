@@ -85,7 +85,6 @@ func TestToImportIDWithOccurrence(t *testing.T) {
 }
 
 func TestUploadToYNAB(t *testing.T) {
-	t.Skip()
 	// Setup
 	ctx := context.Background()
 	ynabAccountID := "account123"
@@ -101,12 +100,13 @@ func TestUploadToYNAB(t *testing.T) {
 		},
 	}
 
+	ynaberMock := newMockynaber(t)
+	ynabTransactions := toYNABTransaction(ynabAccountID, transactions)
+	ynaberMock.EXPECT().CreateTransactions(ynabBudgetID, ynabTransactions).Return(&transaction.OperationSummary{Transactions: []*transaction.Transaction{{}}}, nil)
+
 	// Test
-	err := uploadToYNAB(ctx, nil, ynabAccountID, ynabBudgetID, transactions)
+	err := uploadToYNAB(ctx, ynaberMock, ynabAccountID, ynabBudgetID, transactions)
 
 	// Assert
 	assert.NoError(t, err)
-	// Note: Since uploadToYNAB currently just logs and doesn't make actual API calls,
-	// we can't verify much more than that it doesn't error out.
-	// In a real implementation, we would mock the YNAB API client and verify the calls.
 }

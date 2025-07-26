@@ -15,6 +15,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+type goCardlesser interface {
+	LogIn(ctx context.Context) error
+	RefreshToken(ctx context.Context) error
+	ListTransactions(ctx context.Context, accountID string, from, to time.Time) ([]Transaction, error)
+}
+
 type GoCardless struct {
 	SecretID     string
 	SecretKey    string

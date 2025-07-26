@@ -1,71 +1,63 @@
 package main
 
 import (
-	"bytes"
-	"io"
-	"net/http"
 	"testing"
+	"time"
 
+	"github.com/brunomvsouza/ynab.go/api"
+	"github.com/brunomvsouza/ynab.go/api/transaction"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestSynchronizeTransactions(t *testing.T) {
-	t.Skip()
-	// Create a mock transport for the GoCardless HTTP client
-	mockTransport := &MockTransport{
-		RoundTripFunc: func(req *http.Request) (*http.Response, error) {
-			// Return a successful response for any request
-			// This simulates a successful login and transaction listing
-			return &http.Response{
-				StatusCode: 200,
-				Body: io.NopCloser(bytes.NewBufferString(`{
-					"transactions": {
-						"booked": [
-							{
-								"transactionId": "tx1",
-								"valueDate": "2023-01-01",
-								"transactionAmount": {
-									"amount": "100.50",
-									"currency": "EUR"
-								},
-								"remittanceInformationUnstructured": "Payment for services",
-								"debtorName": "John Doe"
-							}
-						],
-						"pending": []
-					},
-					"last_updated": "2023-01-02T12:00:00Z"
-				}`)),
-			}, nil
-		},
-	}
+	t.Run("success", func(t *testing.T) {
+		goCardlessMock := newMockgoCardlesser(t)
+		goCardlessMock.EXPECT().LogIn(mock.Anything).Return(nil)
 
-	// Create a GoCardless instance with the mock transport
-	mockClient := &http.Client{Transport: mockTransport}
-	gc := GoCardless{
-		SecretID:    "test-id",
-		SecretKey:   "test-key",
-		httpClient:  mockClient,
-		accessToken: "test-access-token", // Pre-set the access token to skip login
-	}
+		nowTS := time.Now().UTC().Truncate(time.Hour)
+		from := nowTS.AddDate(0, 0, -20).Truncate(24 * time.Hour)
 
-	ynabc := NewMockClientServicer(t)
-	//transaction.NewService(ynabc)
-	//ynabc.EXPECT().Transaction().Return()
+		trans1 := Transaction{
+			ID:         "123",
+			Date:       nowTS.AddDate(0, 0, -1),
+			AmountMili: 98765,
+			Memo:       "memo",
+			Name:       "John Doe",
+		}
+		goCardlessMock.EXPECT().ListTransactions(mock.Anything, "aaa", from, nowTS).Return([]Transaction{trans1}, nil)
 
-	oys := openYNABSync{
-		newRelic: nil,
-		gc:       &gc,
-		ynabc:    ynabc,
-	}
+		ynabc := newMockynaber(t)
+		importID := toImportIDWithOccurrence(trans1, 1)
+		ynabc.EXPECT().CreateTransactions("ccc", []transaction.PayloadTransaction{
+			{
+				ID:        "123",
+				AccountID: "bbb",
+				Date:      api.Date{Time: nowTS.AddDate(0, 0, -1).Truncate(24 * time.Hour)},
+				Amount:    98765,
+				Cleared:   transaction.ClearingStatusCleared,
+				Approved:  false,
+				PayeeName: &trans1.Name,
+				Memo:      &trans1.Memo,
+				ImportID:  &importID,
+			},
+		}).Return(&transaction.OperationSummary{Transactions: []*transaction.Transaction{{}}}, nil)
 
-	// Test
-	// Call the synchronize function - this should not panic
-	assert.NotPanics(t, func() {
-		oys.synchronizeTransactions()
+		oys := openYNABSync{
+			newRelic: nil,
+			gc:       goCardlessMock,
+			ynabc:    ynabc,
+			Jobs: []job{
+				{
+					GCAccountID:   "aaa",
+					YNABAccountID: "bbb",
+					YNABBudgetID:  "ccc",
+				},
+			},
+		}
+
+		assert.NotPanics(t, func() {
+			oys.synchronizeTransactions()
+		})
 	})
-
-	// Note: This test primarily verifies that the synchronization function doesn't panic or crash.
-	// In a more comprehensive test, we would verify that transactions are correctly processed
-	// and uploaded to YNAB, possibly by mocking the uploadToYNAB function or checking side effects.
 }

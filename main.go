@@ -20,8 +20,8 @@ type openYNABSync struct {
 	Jobs         []job
 
 	newRelic *newrelic.Application
-	gc       *GoCardless
-	ynabc    ynab.ClientServicer
+	gc       goCardlesser
+	ynabc    ynaber
 }
 
 func main() {
@@ -89,7 +89,7 @@ func main() {
 	oys.gc = &gc
 
 	ynabc := ynab.NewClient(ynabToken)
-	oys.ynabc = ynabc
+	oys.ynabc = ynabc.Transaction()
 
 	s, err := gocron.NewScheduler()
 	if err != nil {
@@ -127,8 +127,8 @@ func (oys *openYNABSync) synchronizeTransaction(j job) {
 
 	funcStartedAt := time.Now()
 	l := slog.Default().With("gocardless_account_id", j.GCAccountID, "ynab_account_id", j.YNABAccountID, "ynab_budget_id", j.YNABBudgetID)
-	to := time.Now()
-	from := to.AddDate(0, 0, -20)
+	to := time.Now().UTC().Truncate(time.Hour)
+	from := to.AddDate(0, 0, -20).Truncate(24 * time.Hour)
 	txn.AddAttribute("from", from.Format("2006-01-02"))
 	txn.AddAttribute("to", to.Format("2006-01-02"))
 	txn.AddAttribute("gocardlessAccountId", j.GCAccountID)

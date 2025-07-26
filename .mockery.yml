@@ -11,19 +11,13 @@ require-template-schema-exists: true
 template: testify
 template-schema: '{{.Template}}.schema.json'
 packages:
-  github.com/brunomvsouza/ynab.go:
+  psmarcin.github.com/open-ynab-sync:
     config:
-      filename: ynabmock_test.go
+      filename: mock_test.go
       pkgname: 'main'
-  github.com/brunomvsouza/ynab.go/api/transaction:
-    config:
-      filename: ynabtransactionmock_test.go
-      pkgname: 'main'
-
-  github.com/brunomvsouza/ynab.go/api/api:
-    config:
-      filename: ynabapimock_test.go
-      pkgname: 'main'
+    interfaces:
+      goCardlesser:
+      ynaber:
 
   psmarcin.github.com/open-ynab-sync/cmd/link/api:
     config:

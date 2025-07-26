@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/brunomvsouza/ynab.go"
 	"github.com/brunomvsouza/ynab.go/api"
 	"github.com/brunomvsouza/ynab.go/api/transaction"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/pkg/errors"
 )
 
-func uploadToYNAB(ctx context.Context, ynabc ynab.ClientServicer, ynabAccountID, ynabBudgetID string, transactions []Transaction) error {
+type ynaber interface {
+	CreateTransactions(budgetID string, p []transaction.PayloadTransaction) (*transaction.OperationSummary, error)
+}
+
+func uploadToYNAB(ctx context.Context, ynabc ynaber, ynabAccountID, ynabBudgetID string, transactions []Transaction) error {
 	txn := newrelic.FromContext(ctx)
 	seg := txn.StartSegment("uploadToYNAB")
 	defer seg.End()
@@ -23,7 +26,7 @@ func uploadToYNAB(ctx context.Context, ynabc ynab.ClientServicer, ynabAccountID,
 		l.InfoContext(ctx, "uploading transaction", "date", payloadTransaction.Date, "payee", *payloadTransaction.PayeeName, "memo", *payloadTransaction.Memo, "amount", payloadTransaction.Amount)
 	}
 
-	result, err := ynabc.Transaction().CreateTransactions(ynabBudgetID, payloadTransactions)
+	result, err := ynabc.CreateTransactions(ynabBudgetID, payloadTransactions)
 	if err != nil {
 		return errors.Wrapf(err, "failed to upload transactions")
 	}
