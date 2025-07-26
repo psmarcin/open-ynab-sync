@@ -16,8 +16,10 @@ packages:
       filename: mock_test.go
       pkgname: 'main'
     interfaces:
-      goCardlesser:
-      ynaber:
+      GoCardlessServicer:
+      YNABServicer:
+      MonitoringServicer:
+      SynchronizationServicer:
 
   psmarcin.github.com/open-ynab-sync/cmd/link/api:
     config:
